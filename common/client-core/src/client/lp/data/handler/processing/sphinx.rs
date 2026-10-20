@@ -55,10 +55,20 @@ fn reassemble(
     let fragment = Fragment::try_from_bytes(plaintext)
         .map_err(|source| LpDataHandlerError::other(format!("malformed fragment: {source}")))?;
 
-    // SAFETY: the only thing held across this lock is a map insert; nothing here can panic while
-    // holding it, so it cannot be poisoned by our own code
-    #[expect(clippy::unwrap_used)]
-    let Some(reconstructed) = reconstructor.lock().unwrap().insert_new_fragment(fragment) else {
+    let reconstructed = {
+        // SAFETY: the only things held across this lock are a map insert and a map sweep; nothing
+        // here can panic while holding it, so it cannot be poisoned by our own code
+        #[expect(clippy::unwrap_used)]
+        let mut reconstructor = reconstructor.lock().unwrap();
+        let reconstructed = reconstructor.insert_new_fragment(fragment);
+
+        // Stopgap: without it, a message that lost a fragment is held forever. This walks every
+        // buffered message on every fragment, under the lock all workers share.
+        // This is temporary until we decide the shape we want for our messages. Either this step will be gone or LP-optimized
+        reconstructor.cleanup_stale_buffers();
+        reconstructed
+    };
+    let Some(reconstructed) = reconstructed else {
         return Ok(None);
     };
 
