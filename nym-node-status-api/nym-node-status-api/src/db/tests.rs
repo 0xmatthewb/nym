@@ -1,22 +1,3 @@
-/// LP details good enough to fill a skimmed node; nothing here verifies them.
-#[cfg(test)]
-fn dummy_lp_details()
--> nym_api_requests::models::described::type_translation::LewesProtocolDetailsV1 {
-    nym_api_requests::models::described::type_translation::LewesProtocolDetailsV1 {
-        content:
-            nym_api_requests::models::described::type_translation::LewesProtocolDetailsDataV1 {
-                enabled: true,
-                control_port: 41264,
-                data_port: 51264,
-                x25519: nym_crypto::asymmetric::x25519::PublicKey::from_bytes(&[3; 32])
-                    .unwrap()
-                    .into(),
-                kem_keys: Default::default(),
-            },
-        signature: nym_crypto::asymmetric::ed25519::Signature::from_bytes(&[0u8; 64]).unwrap(),
-    }
-}
-
 #[cfg(test)]
 mod db_tests {
     #[test]
@@ -318,6 +299,24 @@ mod db_tests {
             skimmed_node.performance,
             nym_contracts_common::Percent::from_percentage_value(100).unwrap()
         );
+    }
+}
+
+/// LP details good enough to fill a skimmed node; nothing here verifies them.
+fn dummy_lp_details()
+-> nym_api_requests::models::described::type_translation::LewesProtocolDetailsV1 {
+    nym_api_requests::models::described::type_translation::LewesProtocolDetailsV1 {
+        content:
+            nym_api_requests::models::described::type_translation::LewesProtocolDetailsDataV1 {
+                enabled: true,
+                control_port: 41264,
+                data_port: 51264,
+                x25519: nym_crypto::asymmetric::x25519::PublicKey::from_bytes(&[3; 32])
+                    .unwrap()
+                    .into(),
+                kem_keys: Default::default(),
+            },
+        signature: nym_crypto::asymmetric::ed25519::Signature::from_bytes(&[0u8; 64]).unwrap(),
     }
 }
 

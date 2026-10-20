@@ -250,7 +250,6 @@ impl DirectoryNode {
             // kept apart.
             mix_host: SocketAddr::new(self.addr.ip(), UNBOUND_MIX_PORT),
             lp_data_host: self.addr,
-            ip_addresses: vec![self.addr.ip()],
             entry: None,
             identity_key: self.identity_public_key,
             sphinx_key: self.sphinx_public_key,

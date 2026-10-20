@@ -261,6 +261,9 @@ LP counters are prefixed `lp_`, and the data-plane mixing metrics `mixnet_lp_`. 
 - **Resource limits.** Fragment reassembly has no memory cap, sessions that never register live for
   a day, and per-address metrics are never pruned.
 - **No SURBs over LP**, which is why service providers can only answer named recipients.
+- **Not yet a datagram service.** LP is meant to carry datagrams, with input and output still to
+  be defined. Meanwhile it temporarily reuses the legacy sphinx message semantics: arbitrary-size
+  messages, chunked and reassembled.
 - **Rollout.** Nodes that publish no LP details are left out of the topology entirely, including
   for legacy routing.
 

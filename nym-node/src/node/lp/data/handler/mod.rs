@@ -215,7 +215,7 @@ impl LpDataHandler {
         let mut ticking_interval = interval(PIPELINE_TICKING_DURATION);
         let mut next_worker = 0;
 
-        loop {
+        'outer: loop {
             tokio::select! {
                 biased;
                 _ = self.shutdown.cancelled() => {
@@ -263,7 +263,7 @@ impl LpDataHandler {
                                 },
                                 TrySendError::Closed(_) => {
                                     info!("LP data handler: outgoing channel is closed");
-                                    break;
+                                    break 'outer;
                                 },
                             }
                         }

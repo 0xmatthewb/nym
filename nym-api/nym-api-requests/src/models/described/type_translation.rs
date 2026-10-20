@@ -219,10 +219,6 @@ impl LewesProtocolDetailsV1 {
     }
 }
 
-// to whoever is thinking of modifying this struct.
-// you MUST NOT change its structure in any way - adding, removing or changing fields.
-// It is the content of `LewesProtocolDetailsV1`, so on top of the bincode concern above, the node's
-// signature is over its JSON serialisation: any change breaks verification of every node.
 #[derive(Clone, Debug, Serialize, Deserialize, schemars::JsonSchema, ToSchema, PartialEq)]
 pub struct LewesProtocolDetailsDataV1 {
     /// Helper field that specifies whether the LP listener(s) is enabled on this node.
