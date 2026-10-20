@@ -117,17 +117,16 @@ where
         let ClientOutput {
             received_buffer_request_sender,
             lp_received_buffer_request_sender,
-            lp_enabled,
         } = client_output;
 
         // one transport or the other, taken as a pair: a request sent over LP is answered into the
         // LP data plane's buffer, so listening on the other one would hear nothing
         let (input_sender, received_buffer_request_sender) = if socks5_config.use_lp {
-            // these are the raw channel ends rather than `send_lp`, so nothing downstream would
-            // refuse a message: asking for a transport this client never built has to fail here
-            if !lp_enabled {
+            let (Some(lp_input_sender), Some(lp_received_buffer_request_sender)) =
+                (lp_input_sender, lp_received_buffer_request_sender)
+            else {
                 return Err(Socks5ClientCoreError::LpRequestedButUnavailable);
-            }
+            };
 
             info!("the socks5 client will reach its provider over the Lewes Protocol");
             (lp_input_sender, lp_received_buffer_request_sender)

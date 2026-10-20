@@ -552,7 +552,10 @@ impl MixnetMessageSender for MixnetClient {
             return Err(Error::StreamModeActive);
         }
         self.client_input
-            .send_lp(message)
+            .lp_input_sender
+            .as_ref()
+            .ok_or(Error::NoLpSession)?
+            .send(message)
             .await
             .map_err(|_| Error::MessageSendingFailure)
     }
@@ -581,7 +584,10 @@ impl MixnetMessageSender for MixnetClientSender {
             return Err(Error::StreamModeActive);
         }
         self.client_input
-            .send_lp(message)
+            .lp_input_sender
+            .as_ref()
+            .ok_or(Error::NoLpSession)?
+            .send(message)
             .await
             .map_err(|_| Error::MessageSendingFailure)
     }

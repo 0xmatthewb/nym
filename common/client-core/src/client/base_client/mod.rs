@@ -125,22 +125,11 @@ pub struct ClientInput {
     /// A channel of its own rather than a fork of [`Self::input_sender`], which is
     /// single-consumer: sharing it would make the two paths exclusive.
     ///
-    /// Nothing reads it when the client was built without an LP data plane; [`Self::send_lp`]
-    /// refuses before reaching it.
-    pub lp_input_sender: InputMessageSender,
-
-    /// Whether this client built an LP data plane at all.
-    pub lp_enabled: bool,
-}
-
-/// Why a message could not be handed to the LP path.
-#[derive(Debug, thiserror::Error)]
-pub enum LpSendError {
-    #[error("this client was built without an LP data plane")]
-    Disabled,
-
-    #[error("the LP data plane is no longer running")]
-    Gone,
+    /// `None` when the client was built without an LP data plane.
+    ///
+    /// A message sent here is accepted whether or not a session exists: nothing at this end knows,
+    /// and a message with no session to travel on is dropped by the data plane.
+    pub lp_input_sender: Option<InputMessageSender>,
 }
 
 impl ClientInput {
@@ -150,23 +139,6 @@ impl ClientInput {
         message: InputMessage,
     ) -> Result<(), tokio::sync::mpsc::error::SendError<InputMessage>> {
         self.input_sender.send(message).await
-    }
-
-    /// Send over LP.
-    ///
-    /// Accepted whether or not a session exists: nothing here knows, and a message with no session
-    /// to travel on is dropped by the data plane rather than refused at this end. What is refused
-    /// is sending at all on a client that has no LP path, which is a caller mistake rather than a
-    /// network condition.
-    pub async fn send_lp(&self, message: InputMessage) -> Result<(), LpSendError> {
-        if !self.lp_enabled {
-            return Err(LpSendError::Disabled);
-        }
-
-        self.lp_input_sender
-            .send(message)
-            .await
-            .map_err(|_| LpSendError::Gone)
     }
 }
 
@@ -178,11 +150,8 @@ pub struct ClientOutput {
     /// A separate pipe rather than a share of the one above, so that either transport can be
     /// retired by deleting its half.
     ///
-    /// Nothing reads it when the client was built without an LP data plane.
-    pub lp_received_buffer_request_sender: ReceivedBufferRequestSender,
-
-    /// Whether this client built an LP data plane at all.
-    pub lp_enabled: bool,
+    /// `None` when the client was built without an LP data plane.
+    pub lp_received_buffer_request_sender: Option<ReceivedBufferRequestSender>,
 }
 
 impl ClientOutput {
@@ -202,15 +171,13 @@ impl ClientOutput {
             ))
             .map_err(|_| ClientCoreError::FailedToRegisterReceiver)?;
 
-        if !self.lp_enabled {
-            return Ok(reconstructed_receiver);
+        if let Some(lp_received_buffer_request_sender) = &self.lp_received_buffer_request_sender {
+            lp_received_buffer_request_sender
+                .unbounded_send(ReceivedBufferMessage::ReceiverAnnounce(
+                    reconstructed_sender,
+                ))
+                .map_err(|_| ClientCoreError::FailedToRegisterReceiver)?;
         }
-
-        self.lp_received_buffer_request_sender
-            .unbounded_send(ReceivedBufferMessage::ReceiverAnnounce(
-                reconstructed_sender,
-            ))
-            .map_err(|_| ClientCoreError::FailedToRegisterReceiver)?;
 
         Ok(reconstructed_receiver)
     }
@@ -1330,9 +1297,7 @@ where
             &shutdown_tracker.clone(),
         );
 
-        // The LP path, control plane and data plane both. A client built without one still hands
-        // out the channels, so nothing downstream has to ask whether they are there; what it does
-        // not do is read them, and `send_lp` refuses rather than letting a message sit.
+        // The LP path, control plane and data plane both.
         #[cfg(not(target_arch = "wasm32"))]
         let lp_channels = if self.lp_enabled {
             Some(
@@ -1356,12 +1321,10 @@ where
         #[cfg(target_arch = "wasm32")]
         let lp_channels = None;
 
-        let lp_enabled = lp_channels.is_some();
-        let (lp_input_sender, lp_received_buffer_request_sender) =
-            lp_channels.unwrap_or_else(|| {
-                tracing::info!("this client runs without an LP data plane");
-                (tokio::sync::mpsc::channel(1).0, mpsc::unbounded().0)
-            });
+        if lp_channels.is_none() {
+            tracing::info!("this client runs without an LP data plane");
+        }
+        let (lp_input_sender, lp_received_buffer_request_sender) = lp_channels.unzip();
 
         // The message_sender is the transmitter for any component generating sphinx packets
         // that are to be sent to the mixnet. They are used by cover traffic stream and real
@@ -1440,14 +1403,12 @@ where
                     input_sender,
                     client_request_sender,
                     lp_input_sender,
-                    lp_enabled,
                 },
             },
             client_output: ClientOutputStatus::AwaitingConsumer {
                 client_output: ClientOutput {
                     received_buffer_request_sender,
                     lp_received_buffer_request_sender,
-                    lp_enabled,
                 },
             },
             client_state: ClientState {

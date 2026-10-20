@@ -1,7 +1,6 @@
 // Copyright 2021-2023 - Nym Technologies SA <contact@nymtech.net>
 // SPDX-License-Identifier: Apache-2.0
 
-pub use accessor::TopologyAccessor;
 use futures::StreamExt;
 use nym_sphinx::addressing::nodes::NodeIdentity;
 use nym_topology::NymTopologyError;
@@ -17,6 +16,7 @@ use wasmtimer::tokio::sleep;
 mod accessor;
 pub mod nym_api_provider;
 
+pub use accessor::TopologyAccessor;
 pub use nym_api_provider::{Config as NymApiTopologyProviderConfig, NymApiTopologyProvider};
 pub use nym_topology::provider_trait::{ToTopologyMetadata, TopologyProvider};
 
