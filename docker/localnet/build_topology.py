@@ -138,7 +138,6 @@ def lp_fields(node_details, name, host):
 
     return {
         "lp_data_host": f"{host}:{lp['data_port']}",
-        "ip_addresses": [host],
         "lp": lp,
         "build_version": build_version,
     }
@@ -227,6 +226,7 @@ def create_gateway_entry(base_dir, node_id, port_delta, suffix, host_ip, gateway
         "node_id": node_id,
         "mix_host": f"{host}:{mix_port}",
         "entry": {
+            "ip_addresses": [host],
             "clients_ws_port": clients_port,
             "hostname": None,
             "clients_wss_port": None

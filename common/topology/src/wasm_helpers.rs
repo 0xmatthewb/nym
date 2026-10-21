@@ -116,7 +116,7 @@ impl TryFrom<WasmFriendlyRoutingNode> for RoutingNode {
         Ok(RoutingNode {
             node_id: value.node_id,
             mix_host: value.mix_host,
-            lp_data_host: SocketAddr::new(value.mix_host.ip(), value.lp.data_port),
+            lp_data_host: value.lp_data_host,
             entry: value.entry,
             identity_key: value.identity_key.as_str().parse().map_err(|_| {
                 SerializableTopologyError::MalformedIdentity {
